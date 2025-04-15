@@ -51,8 +51,7 @@ class MRChiSquare(MRJob):
         
         #input is <(word, category), 1>, sum this up for faster execution
     def combiner(self, key, counts):
-        word, category = key
-        yield word, (category, sum(counts))
+        yield key, sum(counts)
             
         #in reducer chi-square is performed 
         #input should be output of combiner 
