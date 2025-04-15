@@ -1,0 +1,15 @@
+# To run the MapReduce locally, on the small dataset
+python DIC_runner.py -r inline reviews_devset.json 
+## or (piping output into file)
+python DIC_runner.py -r inline reviews_devset.json > output.txt
+
+# To run on the Cluster, using hadoop
+
+## small dataset using inline instead of hadoop (for testing)
+python DIC_runner.py -r inline reviews_devset.json > output_devset.txt
+
+## small dataset
+python DIC_runner.py --hadoop-streaming-jar /usr/lib/hadoop/tools/lib/hadoop-streaming-3.3.6.jar -r hadoop hdfs:///user/dic25_shared/amazon-reviews/full/reviews_devset.json > output_devset.txt
+
+## large dataset
+python DIC_runner.py --hadoop-streaming-jar /usr/lib/hadoop/tools/lib/hadoop-streaming-3.3.6.jar -r hadoop hdfs:///user/dic25_shared/amazon-reviews/full/reviewscombined.json > output.txt
