@@ -1,6 +1,6 @@
 import json
 import heapq
-
+import logging
 import re
 
 from mrjob.job import MRJob
@@ -37,6 +37,12 @@ class ChiSquareCalculator(MRJob):
             '--stopword_file',
             help='Path to file containing stopwords (one per line)'
         )
+        self.add_passthru_arg(
+            '--min_term_freq',
+            type=int,
+            default=3,
+            help='Minimum term frequency to consider for chi-square calculation'
+        )
 
     def load_args(self, args=None):
         """Load dictionaries and configuration from specified files."""
@@ -50,86 +56,103 @@ class ChiSquareCalculator(MRJob):
 
         with open(self.options.stopword_file, 'r', encoding='utf-8') as f:
             # Strip whitespace and convert to lowercase
-            self.stopwords = {line.strip().lower() for line in f}
+            self.stopwords = {line.strip() for line in f}
 
-    def mapper_init(self):
-        """Initialize mapper state before processing any records."""
-        # Dictionary to store term counts by category: {term1: {category1: count1, ...}, ...}
-        self.term_category_counts = {}
+        # Pre-compile regex pattern once
         self.splitter = re.compile(r"[ \t\d(){}\[\].!?;:,+\-=\"~#@&*%€$§\\'\n\r]+")
 
-    def mapper(self, _, line):
-        """Process each document and count term occurrences by category.
+        # Cache total document count
+        self.total_documents = sum(self.frequencies_dict.values())
+
+    def mapper_count(self, _, line):
+        """Process each document and emit term-category counts directly.
 
         Args:
             _: Ignored key
             line: Input line containing a JSON document
 
-        Note:
-            Does not yield any values directly; accumulates counts in memory
-            to be processed by mapper_final.
+        Yields:
+            tuple: ((term, category_id), 1) for each valid term
         """
         document = json.loads(line)
         category_id = self.categories_map.get(document['category'], "X")
         text = document['reviewText'].lower()
 
+        # Process and emit term counts in batches
+        tokens_seen = set()
+        first_debug_error = True
+
         for token in self.splitter.split(text):
-            # Apply preprocessing here
             token = token.strip()
 
-            if (len(token) <= 1) or (token in self.stopwords):
+            if (len(token) <= 1) or (token in self.stopwords) or (token in tokens_seen):
                 continue
 
-            if token not in self.term_category_counts:
-                self.term_category_counts[token] = {}
+            if token=="for" and first_debug_error:
+                logging.info("Forwarding token: {}, also  {} and {}".format(token, token in self.stopwords, self.stopwords) )
+                first_debug_error = False
 
-            updated_count = self.term_category_counts.get(token, {}).get(category_id, 0) + 1
-            self.term_category_counts[token][category_id] = updated_count
+            tokens_seen.add(token)
+            yield (token, category_id), 1
 
-    def mapper_final(self):
-        """Emit accumulated term counts after processing all records in a split.
-
-        Yields:
-            tuple: (term, {category_id: count, ...})
-        """
-        for term, term_count_dict in self.term_category_counts.items():
-            yield term, term_count_dict
-
-    def combiner(self, term, multiple_term_count_dicts):
-        """Combine term count dictionaries from multiple mappers.
+    def combiner_count(self, key, counts):
+        """Combine counts for the same term-category pair.
 
         Args:
-            term: The term being counted
-            multiple_term_count_dicts: Iterator of category count dictionaries
+            key: Tuple of (term, category_id)
+            counts: Iterator of counts
 
         Yields:
-            tuple: (term, combined_counts)
+            tuple: ((term, category_id), sum_of_counts)
         """
-        combined_dict = {}
-        for term_count_dict in multiple_term_count_dicts:
-            # For each dictionary, add its values to the combined dictionary
-            for category_id, count in term_count_dict.items():
-                combined_dict[category_id] = combined_dict.get(category_id, 0) + count
-        yield term, combined_dict
+        yield key, sum(counts)
 
-    def reducer_count(self, term, multiple_term_count_dicts):
+    def reducer_count_and_filter(self, key, counts):
+        """Calculate term frequencies and filter low-frequency terms.
+
+        Args:
+            key: Tuple of (term, category_id)
+            counts: Iterator of counts
+
+        Yields:
+            tuple: (term, (category_id, count)) for terms that meet the minimum frequency
+        """
+        term, category_id = key
+        total_count = sum(counts)
+
+
+        yield term, (category_id, total_count)
+
+    def mapper_calc_chisq(self, term, category_count_tuple):
+        """Prepare data for chi-square calculation.
+
+        Args:
+            term: The term
+            category_count_tuple: Tuple of (category_id, count)
+
+        Yields:
+            tuple: (term, (category_id, count))
+        """
+        # Simply pass through the data to the reducer
+        yield term, category_count_tuple
+
+    def reducer_calc_chiqs(self, term, category_counts):
         """Calculate chi-square statistic for each term-category pair.
 
         Args:
             term: The term being analyzed
-            multiple_term_count_dicts: Iterator of category count dictionaries
+            category_counts: List of tuples (category_id, count) for all categories
 
         Yields:
             tuple: ((term, category), chi_square_value)
         """
-        term_occurrences_per_category = {}
         # Calculate occurrence of term per category
         # Example {"action": 20, "romance": 3, ...}
-        for term_count_dict in multiple_term_count_dicts:
-            for category_id, count in term_count_dict.items():
-                term_occurrences_per_category[category_id] = term_occurrences_per_category.get(category_id, 0) + count
 
-        n_documents = sum(self.frequencies_dict.values())
+        # Calculate total occurrences of this term across all categories
+        term_occurrences_per_category = {cat: count for cat, count in category_counts}
+
+        n_documents = self.total_documents
         n_documents_containing_term = sum(term_occurrences_per_category.values())
 
         for category, category_frequency in self.frequencies_dict.items():
@@ -151,10 +174,13 @@ class ChiSquareCalculator(MRJob):
             N = n_documents
 
             # Chi-square formula
-            chi_square = N * (A*D - B*C)**2 / ((A+B)*(A+C)*(B+D)*(C+D))
+            denominator = ((A+B)*(A+C)*(B+D)*(C+D))
+            if denominator==0: continue
+
+            chi_square = N * (A*D - B*C)**2 / denominator
             yield (term, category), chi_square
 
-    def mapper_categories(self, key, chi_square):
+    def mapper_nlargest_chisq(self, key, chi_square):
         """Group chi-square values by category.
 
         Args:
@@ -178,9 +204,11 @@ class ChiSquareCalculator(MRJob):
             tuple: (category_name, output_string)
         """
         # Get the top 75 terms with highest chi-square values
+        values = list(values)
         top_terms = heapq.nlargest(n=75, iterable=values, key=lambda x: x[1])
 
-        yield category_id, top_terms
+        for item in top_terms:
+            yield category_id, item
 
     def reducer_nlargest_chisq(self, category_id, values):
         """Find the top N terms with highest chi-square values for each category.
@@ -193,6 +221,8 @@ class ChiSquareCalculator(MRJob):
             tuple: (category_name, output_string)
         """
         # Get the top 75 terms with highest chi-square values
+        values = list(values)
+
         top_terms = heapq.nlargest(n=75, iterable=values, key=lambda x: x[1])
 
         yield category_id, top_terms
@@ -201,14 +231,16 @@ class ChiSquareCalculator(MRJob):
         """Define the MapReduce steps for this job."""
         return [
             MRStep(
-                mapper_init=self.mapper_init,
-                mapper=self.mapper,
-                mapper_final=self.mapper_final,
-                combiner=self.combiner,
-                reducer=self.reducer_count
+                mapper=self.mapper_count,
+                combiner=self.combiner_count,
+                reducer=self.reducer_count_and_filter
             ),
             MRStep(
-                mapper=self.mapper_categories,
+                mapper=self.mapper_calc_chisq,
+                reducer=self.reducer_calc_chiqs
+            ),
+            MRStep(
+                mapper=self.mapper_nlargest_chisq,
                 combiner=self.combiner_nlargest_chisq,
                 reducer=self.reducer_nlargest_chisq
             )

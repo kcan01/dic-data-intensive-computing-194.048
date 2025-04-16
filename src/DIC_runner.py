@@ -58,7 +58,8 @@ if __name__ == '__main__':
         #'--arg1', str(threshold_value), #commented out since not implemented
         f'--category_dict_file={dict_file_path}',
         f'--category_frequencies_file={category_frequencies_path}',
-        f'--stopword_file={category_frequencies_path}',
+        f'--stopword_file={stopwords_file_path}',
+        f'reviews_devset.json'
         ]
     chisquareCalculatorArgs.extend(sys.argv[1:])
 
@@ -72,6 +73,7 @@ if __name__ == '__main__':
             category_name = all_categories[category_id]
 
             output_str = category_name + " "
+
             output_str += " ".join([f'{term}:{chisq}' for term, chisq in top_term_list])
 
             print(output_str)
