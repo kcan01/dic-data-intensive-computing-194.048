@@ -86,7 +86,7 @@ class ChiSquareCalculator(MRJob):
         """
         yield key, sum(counts)
 
-    def reducer_count_and_filter(self, key, counts):
+    def reducer_count(self, key, counts):
         """Calculate term frequencies and filter low-frequency terms.
 
         Args:
@@ -199,7 +199,7 @@ class ChiSquareCalculator(MRJob):
             MRStep(
                 mapper=self.mapper_count,
                 combiner=self.combiner_count,
-                reducer=self.reducer_count_and_filter
+                reducer=self.reducer_count
             ),
             MRStep(
                 mapper=None,  # this step needs no mapper
