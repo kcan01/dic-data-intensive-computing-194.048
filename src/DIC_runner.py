@@ -98,6 +98,7 @@ if __name__ == '__main__':
     job = ChiSquareCalculator(args=chisquareCalculatorArgs)
     with job.make_runner() as runner:
         runner.run()
+        output_terms = []
 
         for category_id, top_term_list in job.parse_output(runner.cat_output()):
             # Format output as "category_name term1:chi_square term2:chi_square ..."
@@ -108,6 +109,10 @@ if __name__ == '__main__':
             output_str += " ".join([f'{term}:{chisq:.3f}' for term, chisq in top_term_list])
 
             print(output_str)
+            output_terms.extend([term for term, _ in top_term_list])
+
+    last_line = " ".join(sorted(output_terms))
+    print(last_line)
 
     logger.info(f'--- Ran ChiSquareCalculator Job successfully')
     elapsed_time = timer() - starttime
