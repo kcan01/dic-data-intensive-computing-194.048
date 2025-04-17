@@ -87,7 +87,7 @@ class ChiSquareCalculator(MRJob):
         yield key, sum(counts)
 
     def reducer_count(self, key, counts):
-        """Calculate term frequencies and filter low-frequency terms.
+        """Calculate term frequencies.
 
         Args:
             key: Tuple of (term, category_id)
