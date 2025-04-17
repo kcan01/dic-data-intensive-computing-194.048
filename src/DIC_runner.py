@@ -59,7 +59,6 @@ if __name__ == '__main__':
         f'--category_dict_file={dict_file_path}',
         f'--category_frequencies_file={category_frequencies_path}',
         f'--stopword_file={stopwords_file_path}',
-        f'reviews_devset.json'
         ]
     chisquareCalculatorArgs.extend(sys.argv[1:])
 
