@@ -1,7 +1,7 @@
 # runner script to run the Chi Square Calculator
 
 import logging
-logging.basicConfig(filename='DICrunner.log', level=logging.INFO)
+logging.basicConfig(filename='DIC_runner.log', level=logging.INFO)
 logging.getLogger('mrjob').setLevel(logging.INFO)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -13,6 +13,35 @@ import json
 import sys, os
 from timeit import default_timer as timer
 
+def generate_category_file(out_file_name):
+    cats = {
+        "Apps_for_Android": "A",
+        "Automotive": "B",
+        "Baby": "C",
+        "Beauty": "D",
+        "Book": "E",
+        "CDs_and_Vinyl": "F",
+        "Cell_Phones_and_Accessorie": "G",
+        "Clothing_Shoes_and_Jewelry": "H",
+        "Digital_Music": "I",
+        "Electronic": "J",
+        "Grocery_and_Gourmet_Food": "K",
+        "Health_and_Personal_Care": "L",
+        "Home_and_Kitche": "M",
+        "Kindle_Store": "N",
+        "Movies_and_TV": "O",
+        "Musical_Instrument": "P",
+        "Office_Product": "Q",
+        "Patio_Lawn_and_Garde": "R",
+        "Pet_Supplie": "S",
+        "Sports_and_Outdoor": "T",
+        "Tools_and_Home_Improvement": "U",
+        "Toys_and_Game": "V",
+        "unknown": "X"
+    }
+    with open(out_file_name, "w") as outfile:
+        json.dump(cats, outfile)
+    return
 
 
 
@@ -21,6 +50,10 @@ if __name__ == '__main__':
     dict_file_path = 'categories.json'
     stopwords_file_path = 'stopwords.txt'
     category_frequencies = {}
+
+    if not os.path.isfile(dict_file_path):
+        logging.info("Created category file at {}".format(dict_file_path))
+        generate_category_file(out_file_name=dict_file_path)
 
     with open(dict_file_path) as f:
         categories_map = json.load(f)
@@ -73,7 +106,7 @@ if __name__ == '__main__':
 
             output_str = category_name + " "
 
-            output_str += " ".join([f'{term}:{chisq}' for term, chisq in top_term_list])
+            output_str += " ".join([f'{term}:{chisq:.3f}' for term, chisq in top_term_list])
 
             print(output_str)
 

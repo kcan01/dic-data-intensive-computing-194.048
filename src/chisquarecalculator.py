@@ -46,7 +46,7 @@ class ChiSquareCalculator(MRJob):
             self.stopwords = {line.strip() for line in f}
 
         # Pre-compile regex pattern once
-        self.splitter = re.compile(r"[ \t\d(){}\[\].!?;:,+\-=\"~#@&*%€$§\\'\n\r]+")
+        self.splitter = re.compile(r"[ \t\d(){}\[\].!?;:,+\-=\"~#@&*%€$§\\'\n\r\/]+")
 
         # Cache total document count
         self.total_documents = sum(self.frequencies_dict.values())
@@ -66,21 +66,13 @@ class ChiSquareCalculator(MRJob):
         text = document['reviewText'].lower()
 
         # Process and emit term counts in batches
-        tokens_seen = set()
-        first_debug_error = True
+        tokens_all = set(self.splitter.split(text))
+        tokens_all = tokens_all.difference(self.stopwords)
 
-        for token in self.splitter.split(text):
-            token = token.strip()
+        for token in tokens_all:
+            if len(token) > 1:
+                yield (token, category_id), 1
 
-            if (len(token) <= 1) or (token in self.stopwords) or (token in tokens_seen):
-                continue
-
-            if token=="for" and first_debug_error:
-                logging.info("Forwarding token: {}, also  {} and {}".format(token, token in self.stopwords, self.stopwords) )
-                first_debug_error = False
-
-            tokens_seen.add(token)
-            yield (token, category_id), 1
 
     def combiner_count(self, key, counts):
         """Combine counts for the same term-category pair.
