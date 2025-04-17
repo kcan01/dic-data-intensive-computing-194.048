@@ -94,7 +94,7 @@ class ChiSquareCalculator(MRJob):
             counts: Iterator of counts
 
         Yields:
-            tuple: (term, (category_id, count)) for terms that meet the minimum frequency
+            tuple: (term, (category_id, count)) for all terms
         """
         term, category_id = key
         total_count = sum(counts)
