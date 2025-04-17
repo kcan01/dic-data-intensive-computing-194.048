@@ -111,6 +111,7 @@ if __name__ == '__main__':
             print(output_str)
             output_terms.extend([term for term, _ in top_term_list])
 
+    output_terms = set(output_terms)
     last_line = " ".join(sorted(output_terms))
     print(last_line)
 
