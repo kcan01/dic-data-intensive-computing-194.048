@@ -17,14 +17,6 @@ class ChiSquareCalculator(MRJob):
     def configure_args(self):
         """Configure command-line arguments for the job."""
         super(ChiSquareCalculator, self).configure_args()
-        """ Only uncomment if needed
-        self.add_passthru_arg(
-            '--arg1',
-            type=int,
-            default=0,
-            help='Add argument description here'
-        )
-        """
         self.add_file_arg(
             '--category_dict_file',
             help='Path to JSON file containing category -> ID mapping'
@@ -37,12 +29,7 @@ class ChiSquareCalculator(MRJob):
             '--stopword_file',
             help='Path to file containing stopwords (one per line)'
         )
-        self.add_passthru_arg(
-            '--min_term_freq',
-            type=int,
-            default=3,
-            help='Minimum term frequency to consider for chi-square calculation'
-        )
+
 
     def load_args(self, args=None):
         """Load dictionaries and configuration from specified files."""
