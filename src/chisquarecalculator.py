@@ -102,20 +102,7 @@ class ChiSquareCalculator(MRJob):
 
         yield term, (category_id, total_count)
 
-    def mapper_calc_chisq(self, term, category_count_tuple):
-        """Prepare data for chi-square calculation.
-
-        Args:
-            term: The term
-            category_count_tuple: Tuple of (category_id, count)
-
-        Yields:
-            tuple: (term, (category_id, count))
-        """
-        # Simply pass through the data to the reducer
-        yield term, category_count_tuple
-
-    def reducer_calc_chiqs(self, term, category_counts):
+    def reducer_calc_chisq(self, term, category_counts):
         """Calculate chi-square statistic for each term-category pair.
 
         Args:
@@ -215,8 +202,8 @@ class ChiSquareCalculator(MRJob):
                 reducer=self.reducer_count_and_filter
             ),
             MRStep(
-                mapper=self.mapper_calc_chisq,
-                reducer=self.reducer_calc_chiqs
+                mapper=None,  # this step needs no mapper
+                reducer=self.reducer_calc_chisq
             ),
             MRStep(
                 mapper=self.mapper_nlargest_chisq,

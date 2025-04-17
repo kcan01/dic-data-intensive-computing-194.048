@@ -88,7 +88,6 @@ if __name__ == '__main__':
 
     # Pipe through and extend command line args 
     chisquareCalculatorArgs = [
-        #'--arg1', str(threshold_value), #commented out since not implemented
         f'--category_dict_file={dict_file_path}',
         f'--category_frequencies_file={category_frequencies_path}',
         f'--stopword_file={stopwords_file_path}',
