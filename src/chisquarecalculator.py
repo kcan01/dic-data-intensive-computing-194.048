@@ -167,7 +167,7 @@ class ChiSquareCalculator(MRJob):
             values: Iterator of (term, chi_square) pairs
 
         Yields:
-            tuple: (category_name, output_string)
+            tuple: (category_id, (term, chi_square))
         """
         # Get the top 75 terms with highest chi-square values
         values = list(values)
@@ -184,7 +184,7 @@ class ChiSquareCalculator(MRJob):
             values: Iterator of (term, chi_square) pairs
 
         Yields:
-            tuple: (category_name, output_string)
+            tuple: (category_id, output list)
         """
         # Get the top 75 terms with highest chi-square values
         values = list(values)
