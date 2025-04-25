@@ -87,14 +87,14 @@ class ChiSquareCalculator(MRJob):
         yield key, sum(counts)
 
     def reducer_count(self, key, counts):
-        """Calculate term frequencies and filter low-frequency terms.
+        """Calculate term frequencies.
 
         Args:
             key: Tuple of (term, category_id)
             counts: Iterator of counts
 
         Yields:
-            tuple: (term, (category_id, count)) for terms that meet the minimum frequency
+            tuple: (term, (category_id, count)) for all terms
         """
         term, category_id = key
         total_count = sum(counts)
@@ -167,7 +167,7 @@ class ChiSquareCalculator(MRJob):
             values: Iterator of (term, chi_square) pairs
 
         Yields:
-            tuple: (category_name, output_string)
+            tuple: (category_id, (term, chi_square))
         """
         # Get the top 75 terms with highest chi-square values
         values = list(values)
@@ -184,7 +184,7 @@ class ChiSquareCalculator(MRJob):
             values: Iterator of (term, chi_square) pairs
 
         Yields:
-            tuple: (category_name, output_string)
+            tuple: (category_id, output list)
         """
         # Get the top 75 terms with highest chi-square values
         values = list(values)
