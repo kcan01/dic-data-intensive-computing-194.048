@@ -1,2 +1,3 @@
 src/
-**/reviews-devset.json
+**/reviews_devset.json
+**/*.json
