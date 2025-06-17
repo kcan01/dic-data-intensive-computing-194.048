@@ -2,7 +2,7 @@
 
 ## Group 6
 - Theresa Mayer
-- Theresa Bruckner
+- Theresa Brucker
 - Can Kenan Kandil 
 - Jan Tölken
 - Thomas Klar
