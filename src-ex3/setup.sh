@@ -27,8 +27,12 @@ awslocal ssm put-parameter --name /localstack-assignment3/buckets/reviewsprocess
 
 ./create_functions.sh
 
+# Wait for some time seconds so that the function can be correctly created in the background
+sleep 10s
+
 ./create_events.sh
 
+# Add path to updated website/webapp here
 # Static S3 web app
 #awslocal s3 mb s3://webapp
 #awslocal s3 sync --delete ./website s3://webapp

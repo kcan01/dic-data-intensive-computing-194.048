@@ -82,6 +82,9 @@ awslocal lambda create-function \
 --role arn:aws:iam::000000000000:role/lambda-role \
 --environment Variables="{STAGE=local}"
 
+# Wait for some time seconds so that the function can be correctly created in the background
+sleep 10s
+
 # Add event trigger to run function on image creation
 awslocal s3api put-bucket-notification-configuration \
 --bucket localstack-thumbnails-app-images \

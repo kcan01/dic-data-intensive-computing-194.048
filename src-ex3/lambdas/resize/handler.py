@@ -51,6 +51,7 @@ def download_and_resize(bucket, key) -> str:
     return upload_path
 
 
+
 def handler(event, context):
     target_bucket = get_bucket_name()
 
