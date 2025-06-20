@@ -71,13 +71,17 @@ def s3_object_exists(bucket: str, key: str) -> bool:
         else:
             raise
 
-def upload_dict_to_s3(data: dict, bucket: str):
-    def get_deterministic_key(review_str: str) -> str:
-        hash_digest = hashlib.sha256(review_str.encode("utf-8")).hexdigest()
-        return f"review_{hash_digest}.json"
-        
+
+def get_deterministic_key(data: dict) -> str:
+    reviewer = data.get("reviewerID", "")
+    date = data.get("unixReviewTime", "")
+    asin = data.get("asin", "")
+    identifier = f"{reviewer}+{date}+{asin}"
+    hash_digest = hashlib.sha256(identifier.encode("utf-8")).hexdigest()
+    return f"review_{hash_digest}.json"
+
+def upload_dict_to_s3(data: dict, bucket: str, key: str):
     review_str = json.dumps(data, sort_keys=True)
-    key = get_deterministic_key(review_str)
     if not s3_object_exists(bucket, key):
         s3.put_object(
             Bucket=bucket,
@@ -90,10 +94,15 @@ def preprocess_single_review(review: dict) -> dict:
     preprocessed_review = {}
     def preprocess(text):
         tokens = nltk.word_tokenize(text.lower().translate(punct_table))
-        return [
+        lemmas = [
             lemmatizer.lemmatize(token)
             for token in tokens
             if token.isalpha() and token not in stop_words
+        ]
+        return [
+            lemma
+            for lemma in lemmas
+            if lemma.isalpha() and lemma not in stop_words
         ]
     preprocessed_review["reviewerID"] = review.get("reviewerID", "")
     preprocessed_review["reviewText"] = preprocess(review.get("reviewText", ""))
@@ -112,7 +121,8 @@ def handler(event, context):
 
         Iterator = ReviewSplitter(source_bucket, key)
         for review in Iterator.get():
+            key = get_deterministic_key(review)
             cleaned_review = preprocess_single_review(review)
-            upload_dict_to_s3(cleaned_review, target_bucket)
+            upload_dict_to_s3(cleaned_review, target_bucket, key)
 
 

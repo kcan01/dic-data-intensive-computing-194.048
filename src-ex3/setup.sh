@@ -23,14 +23,14 @@ awslocal ssm put-parameter --name /localstack-assignment3/buckets/reviewsraw --t
 awslocal s3 mb s3://localstack-assignment3-reviews-processed
 awslocal ssm put-parameter --name /localstack-assignment3/buckets/reviewsprocessed --type "String" --value "localstack-assignment3-reviews-processed"
 
-./create_tables.sh
+bash create_tables.sh
 
-./create_functions.sh
+bash create_functions.sh
 
 # Wait for some time seconds so that the function can be correctly created in the background
 sleep 10s
 
-./create_events.sh
+bash create_events.sh
 
 # Add path to updated website/webapp here
 # Static S3 web app
