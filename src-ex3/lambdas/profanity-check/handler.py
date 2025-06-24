@@ -61,6 +61,23 @@ def flag_profanity(review: dict) -> dict:
 def write_to_dynamodb(review_item: dict, table_name: str):
     table = dynamodb.Table(table_name)
     table.put_item(Item=review_item)
+    
+class ReviewSplitter:
+    def __init__(self, source_bucket: str, key: str):
+        self.bucket = source_bucket
+        self.key = key.replace("/", "")
+        self.download_path = f"/tmp/{uuid.uuid4()}{self.key}"
+        s3.download_file(self.bucket, self.key, self.download_path)
+
+    def get(self):
+        with open(self.download_path, "r", encoding="utf-8") as f:
+            for line in f:
+                if line.strip():
+                    try:
+                        yield json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+
 
 def handler(event, context):
     table_name = get_table_name()
