@@ -55,7 +55,6 @@ def flag_profanity(review: dict) -> dict:
         "asin": review.get("asin", ""),
         "reviewText": review_text,
         "summary": summary,
-        "unixReviewTime": review.get("unixReviewTime", ""),
         "contains_profanity": contains_profanity
     }
 
