@@ -27,15 +27,16 @@ args = {
     "aws_secret_access_key": "test",
 }
 
-s3: "S3Client" = boto3.client("s3", **args)
-ssm: "SSMClient" = boto3.client("ssm", **args)
-client: "DynamoDBServiceResource" = boto3.client("dynamodb", **args)
-dynamodb: "DynamoDBClient" = boto3.resource("dynamodb", **args)
+if __name__=="__main__":
+    s3: "S3Client" = boto3.client("s3", **args)
+    ssm: "SSMClient" = boto3.client("ssm", **args)
+    client: "DynamoDBServiceResource" = boto3.client("dynamodb", **args)
+    dynamodb: "DynamoDBClient" = boto3.resource("dynamodb", **args)
 
-nltk_data_path = os.path.join(os.path.dirname(__file__), "nltk_data")
-nltk.data.path.append(nltk_data_path)
+    nltk_data_path = os.path.join(os.path.dirname(__file__), "nltk_data")
+    nltk.data.path.append(nltk_data_path)
 
-analyzer = SentimentIntensityAnalyzer()
+    analyzer = SentimentIntensityAnalyzer()
 
 def get_table_name() -> str:
     param = ssm.get_parameter(Name="/localstack-assignment3/dynamodb/sentiment")

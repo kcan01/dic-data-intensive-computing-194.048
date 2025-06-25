@@ -34,11 +34,12 @@ awslocal lambda create-function \
 (
   cd lambdas/sentiment_analysis
   rm -f lambda.zip
-  mkdir -p package
+  mkdir -p package/nltk_data
   pip install -r requirements.txt -t package --platform manylinux2014_x86_64 --only-binary=:all:
+  python3 -m nltk.downloader vader_lexicon -d package/nltk_data
   zip lambda.zip handler.py;
   cd package
-  zip -r ../lambda.zip *;
+  zip -r ../lambda.zip * nltk_data;
 )
 
 awslocal lambda create-function \
@@ -52,15 +53,15 @@ awslocal lambda create-function \
 
 # Create Profanity Check function
 (
-  cd lambdas/profanity-check
+  cd lambdas/profanity_check
   rm -f lambda.zip
   zip lambda.zip handler.py;
 )
 
 awslocal lambda create-function \
---function-name profanity-check \
+--function-name profanity_check \
 --handler handler.handler \
---zip-file fileb://lambdas/profanity-check/lambda.zip \
+--zip-file fileb://lambdas/profanity_check/lambda.zip \
 --runtime python3.11 \
 --role arn:aws:iam::000000000000:role/lambda-role \
 --environment Variables="{STAGE=local}"
@@ -68,16 +69,16 @@ awslocal lambda create-function \
 
 # Update Profanity Counter Function
 (
-  cd lambdas/update-profanity-counter
+  cd lambdas/update_profanity_counter
   rm -f lambda.zip
   zip lambda.zip handler.py;
 )
 
 awslocal lambda create-function \
---function-name update-profanity-counter \
+--function-name update_profanity_counter \
 --handler handler.handler \
---zip-file fileb://lambdas/update-profanity-counter/lambda.zip \
---runtime python3.11 \
+--zip-file fileb://lambdas/update_profanity_counter/lambda.zip \
+--runtime python3.11
 --role arn:aws:iam::000000000000:role/lambda-role \
 --environment Variables="{STAGE=local}"
 

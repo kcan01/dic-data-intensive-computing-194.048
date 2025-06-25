@@ -32,8 +32,13 @@ awslocal lambda update-function-code \
 # sentiment_analysis function refresh
 (
   cd lambdas/sentiment_analysis
-  rm -rf lambda.zip
-  zip lambda.zip handler.py
+  rm -f lambda.zip
+  mkdir -p package/nltk_data
+  pip install -r requirements.txt -t package --platform manylinux2014_x86_64 --only-binary=:all:
+  python3 -m nltk.downloader vader_lexicon -d package/nltk_data
+  zip lambda.zip handler.py;
+  cd package
+  zip -r ../lambda.zip * nltk_data;
 )
 
 awslocal lambda update-function-code \
@@ -41,28 +46,28 @@ awslocal lambda update-function-code \
 --zip-file fileb://lambdas/sentiment_analysis/lambda.zip
 
 
-# profanity-check function refresh
+# profanity_check function refresh
 (
-  cd lambdas/profanity-check
+  cd lambdas/profanity_check
   rm -rf lambda.zip
   zip lambda.zip handler.py
 )
 
 awslocal lambda update-function-code \
---function-name profanity-check \
---zip-file fileb://lambdas/profanity-check/lambda.zip
+--function-name profanity_check \
+--zip-file fileb://lambdas/profanity_check/lambda.zip
 
 
-# update-profanity-counter function refresh
+# update_profanity_counter function refresh
 (
-  cd lambdas/update-profanity-counter
+  cd lambdas/update_profanity_counter
   rm -rf lambda.zip
   zip lambda.zip handler.py
 )
 
 awslocal lambda update-function-code \
---function-name update-profanity-counter \
---zip-file fileb://lambdas/update-profanity-counter/lambda.zip
+--function-name update_profanity_counter \
+--zip-file fileb://lambdas/update_profanity_counter/lambda.zip
 
 
 # summarize function refresh
