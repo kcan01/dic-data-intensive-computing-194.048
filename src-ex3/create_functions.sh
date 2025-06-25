@@ -32,15 +32,19 @@ awslocal lambda create-function \
 
 # Sentiment Analysis Function
 (
-  cd lambdas/sentiment-analysis
+  cd lambdas/sentiment_analysis
   rm -f lambda.zip
+  mkdir -p package
+  pip install -r requirements.txt -t package --platform manylinux2014_x86_64 --only-binary=:all:
   zip lambda.zip handler.py;
+  cd package
+  zip -r ../lambda.zip *;
 )
 
 awslocal lambda create-function \
---function-name sentiment-analysis \
+--function-name sentiment_analysis \
 --handler handler.handler \
---zip-file fileb://lambdas/sentiment-analysis/lambda.zip \
+--zip-file fileb://lambdas/sentiment_analysis/lambda.zip \
 --runtime python3.11 \
 --role arn:aws:iam::000000000000:role/lambda-role \
 --environment Variables="{STAGE=local}"
