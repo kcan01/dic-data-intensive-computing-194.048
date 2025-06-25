@@ -29,16 +29,16 @@ awslocal lambda update-function-code \
 --zip-file fileb://lambdas/preprocessing/lambda.zip
 
 
-# sentiment-analysis function refresh
+# sentiment_analysis function refresh
 (
-  cd lambdas/sentiment-analysis
+  cd lambdas/sentiment_analysis
   rm -rf lambda.zip
   zip lambda.zip handler.py
 )
 
 awslocal lambda update-function-code \
---function-name sentiment-analysis \
---zip-file fileb://lambdas/sentiment-analysis/lambda.zip
+--function-name sentiment_analysis \
+--zip-file fileb://lambdas/sentiment_analysis/lambda.zip
 
 
 # profanity-check function refresh
