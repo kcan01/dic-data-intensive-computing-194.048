@@ -1,81 +1,75 @@
+import typing
+import pytest
+import json
 import os
 import sys
-import json
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import boto3
-import hashlib
-import pytest
-from time import sleep
-os.environ["AWS_DEFAULT_REGION"] =  "us-east-1"
+from boto3.dynamodb.conditions import Key
+
+if typing.TYPE_CHECKING:
+    from mypy_boto3_s3 import S3Client
+    from mypy_boto3_ssm import SSMClient
+    from mypy_boto3_lambda import LambdaClient
+    from mypy_boto3_dynamodb import DynamoDBClient
+
+os.environ["AWS_DEFAULT_REGION"] = "us-east-1"
 os.environ["AWS_ACCESS_KEY_ID"] = "test"
 os.environ["AWS_SECRET_ACCESS_KEY"] = "test"
-# Import handler
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "lambdas", "profanity")))
-import handler as profanity_handler
-endpoint_url = None
-if os.getenv("STAGE") == "local":
-    endpoint_url = "https://localhost.localstack.cloud:4566"
 
-args = {
-    "region_name": "us-east-1",
-    "endpoint_url": "http://localhost:4566",
-    "aws_access_key_id": "test",
-    "aws_secret_access_key": "test",
-}
-s3: "S3Client" = boto3.client("s3", **args)
-ssm: "SSMClient" = boto3.client("ssm", **args)
-client: "DynamoDBServiceResource" = boto3.client("dynamodb", **args)
-dynamodb: "DynamoDBClient" = boto3.resource("dynamodb", **args)
+s3: "S3Client" = boto3.client("s3", endpoint_url="http://localhost.localstack.cloud:4566")
+ssm: "SSMClient" = boto3.client("ssm", endpoint_url="http://localhost.localstack.cloud:4566")
+awslambda: "LambdaClient" = boto3.client("lambda", endpoint_url="http://localhost.localstack.cloud:4566")
+dynamodb: "DynamoDBClient" = boto3.client("dynamodb", endpoint_url="http://localhost.localstack.cloud:4566")
 
+#from lambdas.preprocessing.handler import get_deterministic_key
 
-def get_table_name():
-    return ssm.get_parameter(Name="/localstack-assignment3/tables/profanity")["Parameter"]["Value"]
+def get_bucket_name(name) -> str:
+    parameter = ssm.get_parameter(Name=name)
+    return parameter["Parameter"]["Value"]
 
-def get_deterministic_key(data: dict) -> str:
-    reviewer = data.get("reviewerID", "")
-    date = data.get("unixReviewTime", "")
-    asin = data.get("asin", "")
-    identifier = f"{reviewer}+{date}+{asin}"
-    return hashlib.sha256(identifier.encode("utf-8")).hexdigest()
+def get_table_name(name) -> str:
+    parameter = ssm.get_parameter(Name=name)
+    return parameter["Parameter"]["Value"]
 
+@pytest.fixture(autouse=True)
+def _wait_for_lambda():
+    awslambda.get_waiter("function_active").wait(FunctionName="profanity")
+    yield
 
-def test_profanity_check():
-    # Setup
-    input_file = "tworeview.json"
-    bucket_name = ssm.get_parameter(Name="/localstack-assignment3/buckets/reviewsprocessed")["Parameter"]["Value"]
-    s3.upload_file(input_file, bucket_name, "tworeview.json")
+def test_profanity_detection():
+    file = os.path.join("tworeview.json")
+    key = os.path.basename(file)
 
-    # Lambda-S3-Event simulieren
-    fake_event = {
-        "Records": [{
-            "s3": {
-                "bucket": {"name": bucket_name},
-                "object": {"key": "tworeview.json"}
-            }
-        }]
-    }
+    bucket = get_bucket_name("/localstack-assignment3/buckets/reviewsprocessed")
+    table = get_table_name("/localstack-assignment3/tables/profanity")
 
-    # Run handler
-    profanity_handler.handler(fake_event, None)
+    with open(file, "r") as f:
+        reviews = [json.loads(line) for line in f if line.strip()]
 
-    # Check
-    with open(input_file, "r") as f:
-        for line in f:
-            review = json.loads(line)
-            key = get_deterministic_key(review)
-            table = dynamodb.Table(get_table_name())
+    keys_out = [get_deterministic_key(r) for r in reviews]
 
-            
-            for _ in range(3):
-                response = table.get_item(Key={"id": key})
-                if "Item" in response:
-                    break
-                sleep(0.5)
+    # Upload the file to trigger the profanity lambda
+    s3.upload_file(file, Bucket=bucket, Key=key)
+
+    # Wait for all items to appear in DynamoDB
+    waiter = dynamodb.get_waiter("table_exists")
+    waiter.wait(TableName=table)
+
+    # Poll for each item
+    for key_out in keys_out:
+        found = False
+        for _ in range(10):  # retry loop (up to ~10 seconds)
+            response = dynamodb.get_item(TableName=table, Key={"id": {"S": key_out}})
+            #response = table.get_item(Key={"id": key})
 
             assert "Item" in response, f"Review {key} not found in DynamoDB"
             assert "contains_profanity" in response["Item"]
             assert isinstance(response["Item"]["contains_profanity"], bool)
 
-    
-            table.delete_item(Key={"id": key})
-
-    s3.delete_object(Bucket=bucket_name, Key="tworeview.json")
+    # Optional: cleanup
+    s3.delete_object(Bucket=bucket, Key=key)
+    for key_out in keys_out:
+        dynamodb.delete_item(TableName=table, Key={"id": {"S": key_out}})
+        
