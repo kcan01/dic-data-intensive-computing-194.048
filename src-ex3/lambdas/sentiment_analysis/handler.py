@@ -43,7 +43,7 @@ def get_table_name() -> str:
     return param["Parameter"]["Value"]
 
 def get_deterministic_key(data: dict) -> str:
-    reviewer = data.get("reviewerID", "")
+    reviewer = data.get("ReviewID", "")
     date     = data.get("unixReviewTime", "")
     asin     = data.get("asin", "")
     identifier = f"{reviewer}+{date}+{asin}"
@@ -66,7 +66,7 @@ def flag_sentiment(review: dict) -> dict:
 
     return {
         "id":             get_deterministic_key(review),
-        "reviewerID":     review.get("reviewerID", ""),
+        "ReviewID":     review.get("ReviewID", ""),
         "asin":           review.get("asin", ""),
         "sentiment":      label,
         "compoundScore":  str(compound)
