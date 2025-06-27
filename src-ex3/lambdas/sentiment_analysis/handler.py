@@ -44,35 +44,7 @@ def get_table_name() -> str:
     response = ssm.get_parameter(Name="/localstack-assignment3/tables/sentiment")
     return response["Parameter"]["Value"]
 
-# def get_table_name():
-#     res = test_ssm_connection()
-#     if res is False:
-#         print("[get_table_name] Failed to connect")
-#     try:
-#         param = ssm.get_parameter(Name="/localstack-assignment3/tables/sentiment", WithDecryption=False)
-#         print("[get_table_name] Got parameter:", param)
-#         return param["Parameter"]["Value"]
-#     except Exception as e:
-#         print("[get_table_name] Error:", e)
-#         raise
-
-# def get_deterministic_key(data: dict) -> str:
-#     reviewer = data.get("ReviewID", "")
-#     date     = data.get("unixReviewTime", "")
-#     asin     = data.get("asin", "")
-#     identifier = f"{reviewer}+{date}+{asin}"
-#     return hashlib.sha256(identifier.encode("utf-8")).hexdigest()
-
-# def get_deterministic_key(s3_object_key: str) -> str:
-#     """
-#     Gibt den Dateinamen zurück, der schon im Preprocessing erzeugt wurde,
-#     z.B. 'review_<hash>.json'.
-#     """
-#     return s3_object_key
-#         #s3_object_key.rsplit(".", 1))[-1]
-
-
-
+#
 def flag_sentiment(review: dict) -> dict:
     text    = " ".join(review.get("reviewText", []))
     summary = " ".join(review.get("summary",    []))
@@ -90,49 +62,12 @@ def flag_sentiment(review: dict) -> dict:
 
     return {
         #"id":             get_deterministic_key(review),
-        "id":     review.get("reviewerID", ""),
+        "id":     review.get("ReviewID", ""),
 #        "asin":           review.get("asin", ""),
-
+        "summary": summary,
         "sentiment":      label,
 #        "compoundScore":  str(compound)
     }
-
-# def write_to_dynamodb(review_item: dict, table_name: str):
-#     table = dynamodb.Table(table_name)
-#     table.put_item(Item=review_item)
-#
-# class ReviewSplitter:
-#     def __init__(self, source_bucket: str, key: str):
-#         self.bucket = source_bucket
-#         self.key    = key.replace("/", "")
-#         self.download_path = f"/tmp/{uuid.uuid4()}{self.key}"
-#         s3.download_file(self.bucket, self.key, self.download_path)
-#
-#     def get(self):
-#         with open(self.download_path, "r", encoding="utf-8") as f:
-#             for line in f:
-#                 if not line.strip():
-#                     continue
-#                 try:
-#                     yield json.loads(line)
-#                 except json.JSONDecodeError:
-#                     continue
-
-# def handler(event, context):
-#     table_name = get_table_name()
-#
-#     for record in event["Records"]:
-#         source_bucket = record["s3"]["bucket"]["name"]
-#         #key = unquote_plus(record["s3"]["object"]["key"])
-#         raw_key = unquote_plus(record["s3"]["object"]["key"])
-#         key = get_deterministic_key(raw_key)
-#
-#         print(f"[Sentiment] Processing {key} from {source_bucket}")
-#
-#         splitter = ReviewSplitter(source_bucket, key)
-#         for review in splitter.get():
-#             item = flag_sentiment(review)
-#             write_to_dynamodb(item, table_name)
 
 def handler(event, context):
     table_name = get_table_name()
@@ -152,7 +87,7 @@ def handler(event, context):
         item = {
             "ReviewID": result["id"],  # muss genau so heißen
             #"reviewText": result["reviewText"],
-            #"summary": result["summary"],
+            "summary": result["summary"],
             "sentiment": result["sentiment"],
         }
         table.put_item(Item=item)

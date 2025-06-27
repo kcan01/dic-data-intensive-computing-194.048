@@ -51,38 +51,6 @@ awslocal lambda create-function \
 --environment Variables="{STAGE=local}"
 
 
-# Create Profanity Check function
-(
-  cd lambdas/profanity_check
-  rm -f lambda.zip
-  zip lambda.zip handler.py;
-)
-
-awslocal lambda create-function \
---function-name profanity_check \
---handler handler.handler \
---zip-file fileb://lambdas/profanity_check/lambda.zip \
---runtime python3.11 \
---role arn:aws:iam::000000000000:role/lambda-role \
---environment Variables="{STAGE=local}"
-
-
-# Update Profanity Counter Function
-(
-  cd lambdas/update_profanity_counter
-  rm -f lambda.zip
-  zip lambda.zip handler.py;
-)
-
-awslocal lambda create-function \
---function-name update_profanity_counter \
---handler handler.handler \
---zip-file fileb://lambdas/update_profanity_counter/lambda.zip \
---runtime python3.11
---role arn:aws:iam::000000000000:role/lambda-role \
---environment Variables="{STAGE=local}"
-
-
 # Create summarize function
 (
   cd lambdas/summarize

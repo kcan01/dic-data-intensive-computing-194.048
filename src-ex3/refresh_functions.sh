@@ -53,6 +53,7 @@ awslocal lambda update-function-code \
   zip lambda.zip handler.py
 )
 
+
 awslocal lambda update-function-code \
 --function-name profanity_check \
 --zip-file fileb://lambdas/profanity_check/lambda.zip
@@ -80,5 +81,6 @@ awslocal lambda update-function-code \
 awslocal lambda update-function-code \
 --function-name summarize \
 --zip-file fileb://lambdas/summarize/lambda.zip
+
 
 echo "Finished script completed successfully!"

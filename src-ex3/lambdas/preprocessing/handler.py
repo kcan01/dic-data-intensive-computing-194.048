@@ -73,7 +73,7 @@ def s3_object_exists(bucket: str, key: str) -> bool:
 
 
 def get_deterministic_key(data: dict) -> str:
-    reviewer = data.get("reviewerID", "")
+    reviewer = data.get("ReviewID", "")
     date = data.get("unixReviewTime", "")
     asin = data.get("asin", "")
     identifier = f"{reviewer}+{date}+{asin}"
@@ -82,6 +82,7 @@ def get_deterministic_key(data: dict) -> str:
 
 def upload_dict_to_s3(data: dict, bucket: str, key: str):
     review_str = json.dumps(data, sort_keys=True)
+    print(f"key: {key}")
     if not s3_object_exists(bucket, key):
         s3.put_object(
             Bucket=bucket,
@@ -104,7 +105,7 @@ def preprocess_single_review(review: dict) -> dict:
             for lemma in lemmas
             if lemma.isalpha() and lemma not in stop_words
         ]
-    preprocessed_review["reviewerID"] = review.get("reviewerID", "")
+    preprocessed_review["ReviewID"] = review.get("ReviewID", "")
     preprocessed_review["reviewText"] = preprocess(review.get("reviewText", ""))
     preprocessed_review["summary"] = preprocess(review.get("summary", ""))
     return preprocessed_review

@@ -19,20 +19,12 @@ ARN_PREPROC=$(awslocal lambda get-function \
 ARN_SENTIM=$(awslocal lambda get-function \
   --function-name sentiment_analysis \
   | jq -r '.Configuration.FunctionArn')
-ARN_PROFAN=$(awslocal lambda get-function \
-  --function-name profanity_check \
-  | jq -r '.Configuration.FunctionArn')
-ARN_UPDPC=$(awslocal lambda get-function \
-  --function-name update_profanity_counter \
-  | jq -r '.Configuration.FunctionArn')
+
 ARN_SUMMAR=$(awslocal lambda get-function \
   --function-name summarize \
   | jq -r '.Configuration.FunctionArn')
 
-# Get ARN for Profanity table in dynamodb
-ARN_TABLE_PROFAN=$(awslocal dynamodb describe-table \
-  --table-name Profanity \
-  | jq -r '.Table.LatestStreamArn')
+
 
 
 # Call preprocessing on insert into raw review bucket
@@ -57,22 +49,11 @@ awslocal s3api put-bucket-notification-configuration \
         \"LambdaFunctionArn\": \"$ARN_SENTIM\",
         \"Events\": [\"s3:ObjectCreated:*\"]
 
-      },
-      {
-        \"LambdaFunctionArn\": \"$ARN_PROFAN\",
-        \"Events\": [\"s3:ObjectCreated:*\"]
-
       }
     ]
   }"
 
 
-# Call update-profanity-counter on insert into Profanity table
-awslocal lambda create-event-source-mapping \
-  --event-source-arn $ARN_TABLE_PROFAN \
-  --function-name update_profanity_counter \
-  --batch-size 1 \
-  --starting-position LATEST
 
 
 # Call summarize only one request event

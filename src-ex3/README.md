@@ -1,4 +1,6 @@
-# DIC Ex3
+j
+J
+d# DIC Ex3
 
 ## Setup
 
