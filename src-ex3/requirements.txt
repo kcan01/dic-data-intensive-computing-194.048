@@ -11,4 +11,4 @@ pytest==8.3.5
 awscli-local==0.22.0
 localstack==4.4.0
 nltk
-# aws==1.40.30
+better_profanity==0.7.0

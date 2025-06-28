@@ -55,7 +55,11 @@ awslocal lambda create-function \
 (
   cd lambdas/profanity_check
   rm -f lambda.zip
+  mkdir -p package
+  pip install -r requirements.txt -t package --platform manylinux2014_x86_64 --only-binary=:all:
   zip lambda.zip handler.py;
+  cd package
+  zip -r ../lambda.zip *;
 )
 
 awslocal lambda create-function \
@@ -78,7 +82,7 @@ awslocal lambda create-function \
 --function-name update_profanity_counter \
 --handler handler.handler \
 --zip-file fileb://lambdas/update_profanity_counter/lambda.zip \
---runtime python3.11
+--runtime python3.11 \
 --role arn:aws:iam::000000000000:role/lambda-role \
 --environment Variables="{STAGE=local}"
 
