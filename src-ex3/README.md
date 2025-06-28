@@ -45,3 +45,21 @@ bash setup.sh
   awslocal s3 cp tenreviews.json s3://localstack-assignment3-reviews-raw
   ```
 - Use ```exit``` to exit the containers shell and go back to your terminal
+
+## Useful commands
+View all inserts in a table (replace Profanity with Sentiment or Users if necessary)
+```bash
+awslocal dynamodb scan --table-name Profanity
+```
+View all files in a bucket (replace )
+```bash
+awslocal s3 ls s3://localstack-assignment3-reviews-raw
+```
+and 
+```bash
+awslocal s3 ls s3://localstack-assignment3-reviews-processed
+```
+Remove all files from one bucket
+```bash
+awslocal s3 rm s3://localstack-assignment3-reviews-processed --recursive
+```
