@@ -44,6 +44,10 @@ bash setup.sh
 - ```bash
   awslocal s3 cp tenreviews.json s3://localstack-assignment3-reviews-raw
   ```
+- To get the Summary about Sentiment, Profanity and banned Users for all reviews currently in the DynamoDB Tables, run
+```bash
+bash get_summary.sh
+```
 - Use ```exit``` to exit the containers shell and go back to your terminal
 
 ## Useful commands
