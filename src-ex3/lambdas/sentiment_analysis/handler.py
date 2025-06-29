@@ -39,9 +39,7 @@ def test_ssm_connection():
         return False
 
 def get_table_name():
-    #res = test_ssm_connection()
-    if res is False:
-        print("[get_table_name] Failed to connect")
+    test_ssm_connection()
     try:
         param = ssm.get_parameter(Name="/localstack-assignment3/tables/sentiment", WithDecryption=False)
         return param["Parameter"]["Value"]
