@@ -64,22 +64,22 @@ awslocal lambda update-function-code \
   zip lambda.zip handler.py;
 )
 
-awslocal lambda update-function \
+awslocal lambda update-function-code \
 --function-name update_profanity_counter \
---zip-file fileb://lambdas/update_profanity_counter/lambda.zip \
+--zip-file fileb://lambdas/update_profanity_counter/lambda.zip 
 
 
 
-# Update summarize function
+#summarize function update
 (
   cd lambdas/summarize
   rm -f lambda.zip
   zip lambda.zip handler.py;
 )
 
-awslocal lambda update-function \
+awslocal lambda update-function-code \
 --function-name summarize \
---zip-file fileb://lambdas/summarize/lambda.zip \
+--zip-file fileb://lambdas/summarize/lambda.zip 
 
 
 
