@@ -137,6 +137,7 @@ def invoke_sentiment_lambda(bucket: str, key: str):
     )
 
 
+
 def test_sentiment_label_and_score():
     source_bucket = get_bucket_name(name="/localstack-assignment3/buckets/reviewsprocessed")
     table = dynamodb.Table(get_table_name())
