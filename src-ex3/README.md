@@ -33,9 +33,33 @@ bash setup-tutorial.sh
 ```bash
 bash setup.sh
 ```
-- Do testing/developement/whatever you want. Run ```bash refresh_functions.sh``` if you make any code changes and want to upload them to aws. You will probably have to add your function to this file.
+- Do testing/developement/whatever you want. Run 
+  ```bash refresh_functions.sh && bash refresh_buckets.sh```
+- if you make any code changes and want to upload them to aws. You will probably have to add your function to this file.
 - You can upload a test file using 
 - ```bash
   awslocal s3 cp onereview.json s3://localstack-assignment3-reviews-raw
   ```
+- Or the larger test file containing 10 reviews
+- ```bash
+  awslocal s3 cp tenreviews.json s3://localstack-assignment3-reviews-raw
+  ```
 - Use ```exit``` to exit the containers shell and go back to your terminal
+
+## Useful commands
+View all inserts in a table (replace Profanity with Sentiment or Users if necessary)
+```bash
+awslocal dynamodb scan --table-name Profanity
+```
+View all files in a bucket (replace )
+```bash
+awslocal s3 ls s3://localstack-assignment3-reviews-raw
+```
+and 
+```bash
+awslocal s3 ls s3://localstack-assignment3-reviews-processed
+```
+Remove all files from one bucket
+```bash
+awslocal s3 rm s3://localstack-assignment3-reviews-processed --recursive
+```
