@@ -14,8 +14,14 @@ if typing.TYPE_CHECKING:
     from mypy_boto3_ssm import SSMClient
     from mypy_boto3_lambda import LambdaClient
 
-os.environ["AWS_DEFAULT_REGION"]    = "us-east-1"
-os.environ["AWS_ACCESS_KEY_ID"]     = "test"
+
+import nltk
+nltk_data_path = os.path.join(os.path.dirname(__file__), "..", "lambdas", "sentiment-analysis", "package", "nltk_data")
+nltk.data.path.append(nltk_data_path)
+
+os.environ["STAGE"] = "local"
+os.environ["AWS_DEFAULT_REGION"] = "us-east-1"
+os.environ["AWS_ACCESS_KEY_ID"] = "test"
 os.environ["AWS_SECRET_ACCESS_KEY"] = "test"
 
 s3: "S3Client" = boto3.client(
@@ -27,107 +33,141 @@ ssm: "SSMClient" = boto3.client(
 awslambda: "LambdaClient" = boto3.client(
     "lambda", endpoint_url="http://localhost.localstack.cloud:4566"
 )
-
 dynamodb = boto3.resource(
     "dynamodb", endpoint_url="http://localhost.localstack.cloud:4566"
 )
 
-def get_bucket_name(name: str) -> str:
+def get_current_notifications(bucket):
+    response = s3.get_bucket_notification_configuration(Bucket=bucket)
+    valid_keys = ['TopicConfigurations', 'QueueConfigurations', 'LambdaFunctionConfigurations', 'EventBridgeConfiguration']
+    return {k: v for k, v in response.items() if k in valid_keys}
+
+def disable_bucket_notifications(bucket):
+    s3.put_bucket_notification_configuration(Bucket=bucket, NotificationConfiguration={})
+
+def restore_notifications(bucket, original_config):
+    s3.put_bucket_notification_configuration(Bucket=bucket, NotificationConfiguration=original_config)
+
+def get_bucket_name(name) -> str:
     parameter = ssm.get_parameter(Name=name)
     return parameter["Parameter"]["Value"]
 
+
+
+
+def get_parameter_value(name: str) -> str:
+    resp = ssm.get_parameter(Name=name)
+    return resp["Parameter"]["Value"]
+
+
+def get_table_name() -> str:
+    return get_parameter_value("/localstack-assignment3/tables/sentiment")
+
 @pytest.fixture(autouse=True)
-def _wait_for_lambda():
+def wait_for_lambda_ready():
+    # Wait until the Lambda function is active
     awslambda.get_waiter("function_active").wait(FunctionName="sentiment_analysis")
     yield
 
-def get_table_name() -> str:
-    param = ssm.get_parameter(Name="/localstack-assignment3/tables/sentiment")
-    return param["Parameter"]["Value"]
+def test_single_review_stored_in_dynamodb():
+    source_bucket = get_bucket_name(name="/localstack-assignment3/buckets/reviewsprocessed")
+    table_name = get_table_name()
+    table = dynamodb.Table(table_name)
 
-from lambdas.sentiment_analysis.handler import get_deterministic_key
 
-# def test_single_review_stored_in_dynamodb():
-#     source_bucket = get_bucket_name(name="/localstack-assignment3/buckets/reviewsraw")
-#     table_name    = get_table_name()
-#     table         = dynamodb.Table(table_name)
-#
-#     #file_path = os.path.join(os.path.dirname(__file__), "onereviewprocessed.json")
-#     file_path = os.path.join(os.path.dirname(__file__), os.pardir, "onereviewprocessed.json")
-#     key       = os.path.basename(file_path)[:-5] + "_TEST1.json"
-#
-#     with open(file_path, "r") as f:
-#         review = json.load(f)
-#     key_out = get_deterministic_key(review)
-#
-#     s3.upload_file(file_path, Bucket=source_bucket, Key=key)
-#
-#     found = False
-#     for _ in range(20):
-#         resp = table.get_item(Key={'ReviewID': key_out})
-#         if 'Item' in resp:
-#             found = True
-#             break
-#         time.sleep(1)
-#     assert found, "Item was not written to DynamoDB"
-#
-#     table.delete_item(Key={'id': key_out})
-#     s3.delete_object(Bucket=source_bucket, Key=key)
-#
-# def test_sentiment_label_and_score():
-#     source_bucket = get_bucket_name(name="/localstack-assignment3/buckets/reviewsraw")
-#     table_name    = get_table_name()
-#     table         = dynamodb.Table(table_name)
-#
-#     file_path = os.path.join(os.path.dirname(__file__), "onereviewprocessed.json")
-#     key       = os.path.basename(file_path)[:-5] + "_TEST2.json"
-#
-#     with open(file_path, "r") as f:
-#         review = json.load(f)
-#     key_out = get_deterministic_key(review)
-#
-#     s3.upload_file(file_path, Bucket=source_bucket, Key=key)
-#     for _ in range(20):
-#         resp = table.get_item(Key={'ReviewID': key_out})
-#         if 'Item' in resp:
-#             item = resp['Item']
-#             break
-#         time.sleep(1)
-#     assert 'Item' in resp
-#
-#     assert item['id'] == key_out
-#     assert item['reviewerID'] == review.get('reviewerID', '')
-#     assert item['asin']       == review.get('asin', '')
-#     assert item['sentiment'] in ("positive", "neutral", "negative")
-#     score = float(item['compoundScore'])
-#     assert -1.0 <= score <= 1.0
-#
-#     table.delete_item(Key={'ReviewID': key_out})
-#     s3.delete_object(Bucket=source_bucket, Key=key)
+    file_path = os.path.join(os.path.dirname(__file__), "onereviewprocessed.json")
+    review_id = "TEST1"
+    key = f"review_{review_id}.json"
 
-#  def test_multiple_reviews_written():
-#     source_bucket = get_bucket_name(name="/localstack-assignment3/buckets/reviewsraw")
-#     table_name    = get_table_name()
-#     table         = dynamodb.Table(table_name)
-#
-#     file_path = os.path.join(os.path.dirname(__file__), "tenreviews.json")
-#     key       = os.path.basename(file_path)
-#
-#     keys_out = []
-#     with open(file_path, "r") as f:
-#         for line in f:
-#             review = json.loads(line)
-#             keys_out.append(get_deterministic_key(review))
-#
-#     s3.upload_file(file_path, Bucket=source_bucket, Key=key)
-#
-#     for key_out in keys_out:
-#         for _ in range(20):
-#             resp = table.get_item(Key={'id': key_out})
-#             if 'Item' in resp:
-#                 break
-#             time.sleep(1)
-#         assert 'Item' in resp
-#         table.delete_item(Key={'id': key_out})
-#
-#     s3.delete_object(Bucket=source_bucket, Key=key)
+    s3.upload_file(file_path, Bucket=source_bucket, Key=key)
+
+    event = {
+        "Records": [
+            {"body": json.dumps({
+                "detail": {
+                    "bucket": {"name": source_bucket},
+                    "object": {"key": key}
+                }
+            })}
+        ]
+    }
+    awslambda.invoke(
+        FunctionName="sentiment_analysis",
+        InvocationType="Event",
+        Payload=json.dumps(event).encode("utf-8")
+    )
+
+    found = False
+    for _ in range(20):
+        resp = table.get_item(Key={'ReviewID': review_id})
+        if 'Item' in resp:
+            found = True
+            break
+        time.sleep(1)
+    assert found, f"Item with ReviewID '{review_id}' was not written to DynamoDB"
+    found = False
+    for _ in range(20):
+        resp = table.get_item(Key={'ReviewID': review_id})
+        if 'Item' in resp:
+            found = True
+            break
+        time.sleep(1)
+    assert found, f"Item with ReviewID '{review_id}' was not written to DynamoDB"
+
+    table.delete_item(Key={'ReviewID': review_id})
+    s3.delete_object(Bucket=source_bucket, Key=key)
+
+def invoke_sentiment_lambda(bucket: str, key: str):
+    event = {
+        "Records": [
+            {
+                "body": json.dumps({
+                    "detail": {
+                        "bucket": {"name": bucket},
+                        "object": {"key": key}
+                    }
+                })
+            }
+        ]
+    }
+    awslambda.invoke(
+        FunctionName="sentiment_analysis",
+        InvocationType="Event",
+        Payload=json.dumps(event).encode("utf-8")
+    )
+
+
+def test_sentiment_label_and_score():
+    source_bucket = get_bucket_name(name="/localstack-assignment3/buckets/reviewsprocessed")
+    table = dynamodb.Table(get_table_name())
+
+    file_path = os.path.join(os.path.dirname(__file__), "onereviewprocessed.json")
+    review_id = "TEST2"
+    key = f"review_{review_id}.json"
+
+    with open(file_path, "r") as f:
+        review = json.load(f)
+
+    s3.upload_file(file_path, Bucket=source_bucket, Key=key)
+    invoke_sentiment_lambda(source_bucket, key)
+
+    item = None
+    for _ in range(20):
+        resp = table.get_item(Key={'ReviewID': review_id})
+        if 'Item' in resp:
+            item = resp['Item']
+            break
+        time.sleep(1)
+    assert item, f"Item with ReviewID '{review_id}' not found"
+
+    assert item['ReviewID'] == review_id
+    expected_user = review.get('reviewerID', 'UNKNOWN')
+    assert item['UserID'] == expected_user, f"Expected UserID '{expected_user}', got '{item['UserID']}'"
+    assert item['sentiment'] in ("positive", "neutral", "negative")
+    score = float(item['sentimentScore'])
+    assert -1.0 <= score <= 1.0, "sentimentScore out of range"
+
+    table.delete_item(Key={'ReviewID': review_id})
+    s3.delete_object(Bucket=source_bucket, Key=key)
+
+
