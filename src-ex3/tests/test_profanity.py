@@ -15,21 +15,24 @@ if typing.TYPE_CHECKING:
     from mypy_boto3_lambda import LambdaClient
     from mypy_boto3_dynamodb import DynamoDBClient, DynamoDBServiceResource
 
+
 os.environ["AWS_DEFAULT_REGION"] = "us-east-1"
 os.environ["AWS_ACCESS_KEY_ID"] = "test"
 os.environ["AWS_SECRET_ACCESS_KEY"] = "test"
-args = {
-    "region_name": "us-east-1",
-    "endpoint_url": "http://localhost:4566",
-    "aws_access_key_id": "test",
-    "aws_secret_access_key": "test",
-}
 
-s3: "S3Client" = boto3.client("s3", endpoint_url="http://localhost.localstack.cloud:4566")
-ssm: "SSMClient" = boto3.client("ssm", endpoint_url="http://localhost.localstack.cloud:4566")
-awslambda: "LambdaClient" = boto3.client("lambda", endpoint_url="http://localhost.localstack.cloud:4566")
-client: "DynamoDBServiceResource" = boto3.client("dynamodb", **args)
-dynamodb: "DynamoDBClient" = boto3.resource("dynamodb", **args)
+s3: "S3Client" = boto3.client(
+    "s3", endpoint_url="http://localhost.localstack.cloud:4566"
+)
+ssm: "SSMClient" = boto3.client(
+    "ssm", endpoint_url="http://localhost.localstack.cloud:4566"
+)
+awslambda: "LambdaClient" = boto3.client(
+    "lambda", endpoint_url="http://localhost.localstack.cloud:4566"
+)
+dynamodb = boto3.resource(
+    "dynamodb", endpoint_url="http://localhost.localstack.cloud:4566"
+)
+
 
 #from lambdas.preprocessing.handler import get_deterministic_key
 def get_deterministic_key(data: dict) -> str:
@@ -87,7 +90,7 @@ def test_profanity_detection():
     #waiter = dynamodb.get_waiter("table_exists")
     #waiter.wait(TableName=table)
 
-
+    # Poll for each item
     review_id = get_review_id_from_key(keys_out) 
     found = False
     for _ in range(10):  # retry loop (up to ~10 seconds)
@@ -97,7 +100,7 @@ def test_profanity_detection():
         assert "contains_profanity" in response["Item"]
         assert isinstance(response["Item"]["contains_profanity"], bool)
 
-    #Cleaning
+    # Optional: cleanup
     s3.delete_object(Bucket=source_bucket, Key=key)
     s3.delete_object(Bucket=target_bucket, Key=keys_out)
     for key_out in keys_out:
