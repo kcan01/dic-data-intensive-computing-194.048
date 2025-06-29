@@ -87,7 +87,7 @@ def test_profanity_detection():
     #waiter = dynamodb.get_waiter("table_exists")
     #waiter.wait(TableName=table)
 
-    # Poll for each item
+
     review_id = get_review_id_from_key(keys_out) 
     found = False
     for _ in range(10):  # retry loop (up to ~10 seconds)
@@ -97,7 +97,7 @@ def test_profanity_detection():
         assert "contains_profanity" in response["Item"]
         assert isinstance(response["Item"]["contains_profanity"], bool)
 
-    # Optional: cleanup
+    #Cleaning
     s3.delete_object(Bucket=source_bucket, Key=key)
     s3.delete_object(Bucket=target_bucket, Key=keys_out)
     for key_out in keys_out:
