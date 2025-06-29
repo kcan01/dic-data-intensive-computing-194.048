@@ -5,7 +5,7 @@ import os
 import sys
 import hashlib
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
+import re
 import boto3
 from boto3.dynamodb.conditions import Key
 
@@ -40,6 +40,18 @@ def get_deterministic_key(data: dict) -> str:
     hash_digest = hashlib.sha256(identifier.encode("utf-8")).hexdigest()
     return f"review_{hash_digest}.json"
 
+def get_review_id(filename: str) -> str:
+    match = re.fullmatch(r'review_(.+)\.json', filename)
+    if match:
+        return match.group(1)
+    else:
+        return "UNKNOWN"
+    
+def get_review_id_from_key(key: str) -> str:
+    import re
+    match = re.fullmatch(r'review_(.+)\.json', key)
+    return match.group(1) if match else "UNKNOWN"
+    
 def get_bucket_name(name) -> str:
     parameter = ssm.get_parameter(Name=name)
     return parameter["Parameter"]["Value"]
@@ -71,24 +83,25 @@ def test_profanity_detection():
     table_name = get_table_name("/localstack-assignment3/tables/profanity")
     table = dynamodb.Table(table_name)
     
-    
     # Wait for all items to appear in DynamoDB
     #waiter = dynamodb.get_waiter("table_exists")
     #waiter.wait(TableName=table)
 
     # Poll for each item
-    for key_out in keys_out:
-        found = False
-        for _ in range(10):  # retry loop (up to ~10 seconds)
-            response = table.get_item(Key={"ReviewID": reviewerID})
-            #response = table.get_item(Key={"id": key})
-
-            assert "Item" in response, f"Review {key_out} not found in DynamoDB"
-            assert "contains_profanity" in response["Item"]
-            assert isinstance(response["Item"]["contains_profanity"], bool)
+    review_id = get_review_id_from_key(keys_out) 
+    found = False
+    for _ in range(10):  # retry loop (up to ~10 seconds)
+        response = table.get_item(Key={"ReviewID": review_id})
+        #response = table.get_item(Key={"id": key})
+        assert "Item" in response, f"Review {review_id} not found in DynamoDB"
+        assert "contains_profanity" in response["Item"]
+        assert isinstance(response["Item"]["contains_profanity"], bool)
 
     # Optional: cleanup
     s3.delete_object(Bucket=source_bucket, Key=key)
-    s3.delete_object(Bucket=target_bucket, Key=key_out)
+    s3.delete_object(Bucket=target_bucket, Key=keys_out)
     for key_out in keys_out:
         table.delete_item(Key={"ReviewID": reviewerID})
+        
+        
+        
