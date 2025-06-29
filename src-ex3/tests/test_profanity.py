@@ -62,7 +62,7 @@ def get_table_name(name) -> str:
 
 @pytest.fixture(autouse=True)
 def _wait_for_lambda():
-    awslambda.get_waiter("function_active").wait(FunctionName="profanity")
+    awslambda.get_waiter("function_active").wait(FunctionName="profanity_check")
     yield
 
 def test_profanity_detection():
