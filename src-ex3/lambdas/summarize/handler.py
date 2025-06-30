@@ -64,7 +64,7 @@ def handler(event, context):
         #find banned users
         banned_users = []
         for item in users_items:
-            if item.get('profanity_count', 0) > 3 or item.get('banned', False):
+            if item.get('n_profane_reviews', 0) > 3 or item.get('is_banned', False):
                 banned_users.append(item['UserID'])
         
         #create summary
