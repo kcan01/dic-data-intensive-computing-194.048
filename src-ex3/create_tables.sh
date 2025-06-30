@@ -1,16 +1,20 @@
 #!/bin/bash
 
-# Exit immediately if a command exits with a non-zero status
-# set -e
-
-# Optional: Echo each command before running it
-set -x
 
 # -------------------------------
 # ENVIRONMENT SETUP (OPTIONAL)
 # -------------------------------
-# export EXAMPLE_ENV_VAR="some_value"
-awslocal dynamodb create-table \
+# Helper function to run a command quietly, but print command + error if it fails
+run_cmd() {
+  # Run the command passed as argument, redirect stdout to /dev/null, stderr captured
+  if ! output=$("$@" 2>&1 >/dev/null); then
+    echo "Error running command: $*"
+    echo "$output"
+    exit 1
+  fi
+}
+
+run_cmd awslocal dynamodb create-table \
     --table-name Sentiment \
     --attribute-definitions \
         AttributeName=ReviewID,AttributeType=S \
@@ -18,9 +22,9 @@ awslocal dynamodb create-table \
         AttributeName=ReviewID,KeyType=HASH \
     --billing-mode PAY_PER_REQUEST \
     --table-class STANDARD
-awslocal ssm put-parameter --name /localstack-assignment3/tables/sentiment --type "String" --value "Sentiment"
+run_cmd awslocal ssm put-parameter --name /localstack-assignment3/tables/sentiment --type "String" --value "Sentiment"
 
-awslocal dynamodb create-table \
+run_cmd awslocal dynamodb create-table \
     --table-name Profanity \
     --attribute-definitions \
         AttributeName=ReviewID,AttributeType=S \
@@ -28,14 +32,14 @@ awslocal dynamodb create-table \
         AttributeName=ReviewID,KeyType=HASH \
     --billing-mode PAY_PER_REQUEST \
     --table-class STANDARD
-awslocal ssm put-parameter --name /localstack-assignment3/tables/profanity --type "String" --value "Profanity"
-awslocal dynamodb update-table \
+run_cmd awslocal ssm put-parameter --name /localstack-assignment3/tables/profanity --type "String" --value "Profanity"
+run_cmd awslocal dynamodb update-table \
   --table-name Profanity \
   --stream-specification StreamEnabled=true,StreamViewType=NEW_IMAGE
 
 
 
-awslocal dynamodb create-table \
+run_cmd awslocal dynamodb create-table \
     --table-name Users \
     --attribute-definitions \
         AttributeName=UserID,AttributeType=S \
@@ -43,5 +47,5 @@ awslocal dynamodb create-table \
         AttributeName=UserID,KeyType=HASH \
     --billing-mode PAY_PER_REQUEST \
     --table-class STANDARD
-awslocal ssm put-parameter --name /localstack-assignment3/tables/users --type "String" --value "Users"
+run_cmd awslocal ssm put-parameter --name /localstack-assignment3/tables/users --type "String" --value "Users"
 

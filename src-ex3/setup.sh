@@ -1,10 +1,5 @@
 #!/bin/bash
 
-# Exit immediately if a command exits with a non-zero status
-# set -e
-
-# Optional: Echo each command before running it
-set -x
 
 # -------------------------------
 # ENVIRONMENT SETUP (OPTIONAL)
@@ -15,13 +10,23 @@ set -x
 # COMMANDS TO RUN
 # -------------------------------
 
+# Helper function to run a command quietly, but print command + error if it fails
+run_cmd() {
+  # Run the command passed as argument, redirect stdout to /dev/null, stderr captured
+  if ! output=$("$@" 2>&1 >/dev/null); then
+    echo "Error running command: $*"
+    echo "$output"
+    exit 1
+  fi
+}
+
 echo "Starting setup script..."
 
-awslocal s3 mb s3://localstack-assignment3-reviews-raw
-awslocal ssm put-parameter --name /localstack-assignment3/buckets/reviewsraw --type "String" --value "localstack-assignment3-reviews-raw"
+run_cmd awslocal s3 mb s3://localstack-assignment3-reviews-raw
+run_cmd awslocal ssm put-parameter --name /localstack-assignment3/buckets/reviewsraw --type "String" --value "localstack-assignment3-reviews-raw"
 
-awslocal s3 mb s3://localstack-assignment3-reviews-processed
-awslocal ssm put-parameter --name /localstack-assignment3/buckets/reviewsprocessed --type "String" --value "localstack-assignment3-reviews-processed"
+run_cmd awslocal s3 mb s3://localstack-assignment3-reviews-processed
+run_cmd awslocal ssm put-parameter --name /localstack-assignment3/buckets/reviewsprocessed --type "String" --value "localstack-assignment3-reviews-processed"
 
 bash create_tables.sh
 
@@ -43,5 +48,5 @@ bash create_events.sh
 # python my_app.py
 # curl https://example.com
 
-echo "Started App, access at https://webapp.s3-website.localhost.localstack.cloud:4566/"
-echo "Setup script completed successfully!"
+
+echo "Setup script completed!"
