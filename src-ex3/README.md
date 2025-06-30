@@ -42,8 +42,9 @@ bash setup.sh
   ```
 - Or the larger test file containing 10 reviews
 - ```bash
-  awslocal s3 cp tenreviews.json s3://localstack-assignment3-reviews-raw
-  ```
+   python upload_batched.py reviews_devset.json 2000 5
+   ```
+  this uploads the file `reviews_devset.json` in batches of 2000 reviews with 5 Minute delay between batches
 - To get the Summary about Sentiment, Profanity and banned Users for all reviews currently in the DynamoDB Tables, run
 ```bash
 bash get_summary.sh

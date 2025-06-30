@@ -66,10 +66,7 @@ def s3_object_exists(bucket: str, key: str) -> bool:
         s3.head_object(Bucket=bucket, Key=key)
         return True
     except s3.exceptions.ClientError as e:
-        if e.response['Error']['Code'] == "404":
-            return False
-        else:
-            raise
+        return False
 
 
 def get_deterministic_key(data: dict) -> str:
