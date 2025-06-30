@@ -105,7 +105,7 @@ run_cmd awslocal lambda create-function \
 --runtime python3.11 \
 --role arn:aws:iam::000000000000:role/lambda-role \
 --environment Variables="{STAGE=local}" \
---memory-size 128 \
+--memory-size 256 \
 --timeout 45
 
 

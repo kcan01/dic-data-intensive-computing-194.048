@@ -25,11 +25,7 @@ docker-compose run --rm dic-shell
 ```
 - This creates a new docker container and puts you inside it. You should then be in its terminal.
 - Inside this terminal, you can now run
-```bash
-bash setup-tutorial.sh
-```
-- This sets up everything from the tutorial. You can then access the web interface.
-- For the actual exercise, try
+
 ```bash
 bash setup.sh
 ```
@@ -40,7 +36,7 @@ bash setup.sh
 - ```bash
   awslocal s3 cp onereview.json s3://localstack-assignment3-reviews-raw
   ```
-- Or the larger test file containing 10 reviews
+- Or the entire review file `reviews_devset.json` with > 70 000 reviews
 - ```bash
    python upload_batched.py reviews_devset.json 2000 5
    ```
