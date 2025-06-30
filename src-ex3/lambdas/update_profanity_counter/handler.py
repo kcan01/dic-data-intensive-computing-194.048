@@ -1,5 +1,4 @@
 import boto3
-from boto3.dynamodb.conditions import Key
 import os
 import typing
 
@@ -15,8 +14,9 @@ if os.getenv("STAGE") == "local":
 
 s3: "S3Client" = boto3.client("s3", endpoint_url=endpoint_url)
 ssm: "SSMClient" = boto3.client("ssm", endpoint_url=endpoint_url)
-client: "DynamoDBServiceResource" = boto3.client("dynamodb", endpoint_url=endpoint_url)
-dynamodb: "DynamoDBClient" = boto3.resource("dynamodb", endpoint_url=endpoint_url)
+client: "DynamoDBClient" = boto3.client("dynamodb", endpoint_url=endpoint_url)
+dynamodb: "DynamoDBServiceResource" = boto3.resource("dynamodb", endpoint_url=endpoint_url)
+
 
 
 def get_users_table_name():
@@ -24,6 +24,7 @@ def get_users_table_name():
     return response["Parameter"]["Value"]
 
 USERS_TABLE = get_users_table_name()
+table = dynamodb.Table(USERS_TABLE)
 
 
 def handler(event, context):
@@ -45,28 +46,24 @@ def handler(event, context):
 
         # try to get the current user's item
         try:
-            response = dynamodb.get_item(
-                TableName=USERS_TABLE,
-                Key={"UserID": {"S": user_id}},
-            )
+            response = table.get_item(Key={"UserID": user_id})
             item = response.get("Item", {})
         except Exception as e:
             print(f"Error fetching user {user_id}: {e}")
             continue
 
         # get current count or start from 0
-        current_count = int(item.get("n_profane_reviews", {}).get("N", "0"))
+        current_count = item.get("n_profane_reviews", 0)
         new_count = current_count + 1
-        is_banned = new_count > 0
+        is_banned = new_count > 3
 
         # update or insert user with new count and ban status
         try:
-            dynamodb.put_item(
-                TableName=USERS_TABLE,
+            table.put_item(
                 Item={
-                    "UserID": {"S": user_id},
-                    "n_profane_reviews": {"N": str(new_count)},
-                    "is_banned": {"BOOL": is_banned},
+                    "UserID": user_id,
+                    "n_profane_reviews": new_count,
+                    "is_banned": is_banned,
                 }
             )
             print(f"Updated user {user_id}: count={new_count}, banned={is_banned}")
